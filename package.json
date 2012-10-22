@@ -9,6 +9,7 @@
   "repository": "",
   "author": "",
   "license": "BSD",
+  "bin": {"nsh":"./nsh.js"},
   "dependencies": {
     "esprima": "~0.9.9",
     "async": "~0.1.22"

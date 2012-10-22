@@ -1,7 +1,12 @@
+#!/usr/bin/env node
+
 var esprima = require('./vendor/esprima');
 var spoon = require('spoon');
 var escodegen = require('escodegen');
+
+// Error.stackTraceLimit = 100;
 function NSHELL() {
+   // Error.stackTraceLimit = 100;
    var waitpid = require('node-waitpid')
    __$callback = function (err, val) {
       if (err) throw err;
@@ -83,6 +88,9 @@ function NSHELL() {
          next( null, origin || destination );
       }
    }
+   $ENV = function (k) {
+      return process.env[k];
+   }
    $PIPE = function () {
       var args = [].slice.call(arguments);
       var next = args.pop();
@@ -158,10 +166,19 @@ var repl = readline.createInterface({
    output: process.stdout,
    terminal: true
 });
-repl.question('', function (str) {
+var vm = require('vm');
+var ctx = vm.createContext({
+   process: process,
+   require: require,
+   console: console
+});
+vm.runInContext('(' + NSHELL.toString() + ')();', ctx);
+repl.question('~ ', evaluate);
+function evaluate(str) {
    var program = str; // should dump "0" to console
    var parsed = esprima.parse(program);
    var toSpoon = escodegen.generate(parsed);
-   console.log(toSpoon);
-   eval('(' + NSHELL.toString() + ')();' + spoon(toSpoon, ['$', '$PIPE']));
-});
+   // console.error(toSpoon);
+   vm.runInContext('(function () { ' + spoon(toSpoon, ['$', '$PIPE']) + '})()', ctx);
+   repl.question('~ ', evaluate);
+}

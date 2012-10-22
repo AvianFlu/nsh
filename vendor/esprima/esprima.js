@@ -37,6 +37,7 @@ parseFunctionSourceElements: true, parseVariableIdentifier: true,
 parseLeftHandSideExpression: true,
 parseStatement: true, parseSourceElement: true */
 
+var IN_SHELLMODE=false;
 (function (exports) {
     'use strict';
 
@@ -1625,31 +1626,23 @@ parseStatement: true, parseSourceElement: true */
         if (type === Token.Identifier) {
             var name = lex().value;
             if (/^\$./.test(name)) {
-                return {
-                    "type": "MemberExpression",
-                    "computed": true,
-                    "object": {
-                        "type": "MemberExpression",
-                        "computed": false,
-                        "object": {
-                            "type": "Identifier",
-                            "name": "process"
-                        },
-                        "property": {
-                            "type": "Identifier",
-                            "name": "env"
-                        }
-                    },
-                    "property": {
+                expr = {
+                    type: 'CallExpression',
+                    callee: {type: 'Identifier', name: '$ENV'},
+                    arguments: [{
                         "type": "Literal",
                         "value": name.slice(1)
-                    }
+                    }]
                 }
             }
-            return {
-                type: Syntax.Identifier,
-                name: name
-            };
+            else {
+                expr = {
+                    type: Syntax.Identifier,
+                    name: name
+                };
+            }
+            // console.error('SHELLMODE', IN_SHELLMODE)
+            return IN_SHELLMODE ? expr : getCall(expr, []);
         }
 
         if (type === Token.StringLiteral || type === Token.NumericLiteral) {
@@ -2907,6 +2900,7 @@ parseStatement: true, parseSourceElement: true */
             }
         }
 
+        IN_SHELLMODE = true;
         expr = parseExpression();
 
         // 12.12 Labelled Statements
@@ -2930,27 +2924,49 @@ parseStatement: true, parseSourceElement: true */
 
         try {
             consumeSemicolon();
+            if (expr.type === 'Identifier') {
+                expr = getCall(expr, []);
+            }
         }
         catch (e) {
             //
             // Change this into a function call
             //
+            // console.log(e, 123);
             var args = [];
-            console.error(e.message)
-            while (/Unexpected (?:number|string|boolean|identifier)/i.test(e.message)) {
-                console.error(e)
+            while (/Unexpected (?:number|string|boolean|identifier|end of input)/i.test(e.toString())) {
+                if (/end of input/.test(e.toString())) {
+                    // console.error(source.slice(index));
+                    var matcher = /\.(?:\\.|\S+)/g;
+                    matcher.lastIndex = index;
+                    var found = matcher.exec(source);
+                    if (found) {
+                        args.push({type: 'Literal', value: found[0]});
+                    }
+                    else {
+                        throw e;
+                    }
+                }
                 try {
                     var next = parseExpression();
+                    // console.error(next)
                     args.push(next);
                     consumeSemicolon();
-                    e = {message:'done'};
+                    e = 'done';
                 }
                 catch (er) {
                     e = er;
                 }
             }
-            return getCall(expr, args);
+            expr = {
+                "type": Syntax.ExpressionStatement,
+                "expression": getCall(expr, args)
+            }
+            IN_SHELLMODE = false;
+            // console.error(expr);
+            return expr;
         }
+        IN_SHELLMODE = false;
 
         return {
             type: Syntax.ExpressionStatement,
@@ -3737,11 +3753,8 @@ parseStatement: true, parseSourceElement: true */
 
 }(typeof exports === 'undefined' ? (esprima = {}) : exports));
 /* vim: set sw=4 ts=4 et tw=80 : */
-
 function getCall(expr, args) {
     return {
-        "type": "ExpressionStatement",
-        "expression": {
             "type": "ConditionalExpression",
             "test": {
                 "type": "BinaryExpression",
@@ -3760,7 +3773,7 @@ function getCall(expr, args) {
                     "type": "CallExpression",
                     callee: {"type":"Identifier","name": "$CALL"},
                     "arguments": [
-                        {type:"Literal",value:expr?expr.name:expr},
+                        expr.type === 'Identifier' ? {type:'Literal', value: expr.name} : expr,
                         {
                             type: "ArrayExpression",
                             elements: (args || [])
@@ -3802,6 +3815,5 @@ function getCall(expr, args) {
                 },
                 "alternate": expr
             }
-        }
     }
 }
