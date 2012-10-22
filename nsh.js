@@ -7,7 +7,7 @@ var escodegen = require('escodegen');
 // Error.stackTraceLimit = 100;
 function NSHELL() {
    // Error.stackTraceLimit = 100;
-   var waitpid = require('node-waitpid')
+   var waitpid = require('waitpid')
    __$callback = function (err, val) {
       if (err) throw err;
       return val;

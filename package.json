@@ -15,6 +15,7 @@
   "dependencies": {
     "esprima": "~0.9.9",
     "async": "~0.1.22",
-    "spoon": "~0.1.2"
+    "spoon": "~0.1.2",
+    "waitpid": "~0.1.0"
   }
 }
