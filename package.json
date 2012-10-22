@@ -1,0 +1,16 @@
+{
+  "name": "nsh",
+  "version": "0.0.0",
+  "description": "ERROR: No README.md file found!",
+  "main": "nsh.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "",
+  "author": "",
+  "license": "BSD",
+  "dependencies": {
+    "esprima": "~0.9.9",
+    "async": "~0.1.22"
+  }
+}
